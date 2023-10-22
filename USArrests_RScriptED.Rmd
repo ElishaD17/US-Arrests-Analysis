@@ -1,0 +1,310 @@
+---
+title: "USArrests_RScript_Answers"
+author: "Elisha Damor"
+date: "5/21/2023"
+output:
+  html_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+Use control+Enter to run the code chunks on PC.
+Use  command+Enter to run the code chunks on MAC.
+
+## Load Packages
+
+In this section, we install and load the necessary packages. 
+
+```{r libraries, message=FALSE, include = FALSE}
+### Install packages. If you haven't install the following package, please uncomment the line below to install it. Then, comment it back before knitting the document.
+#install.packages("ggplot2")
+
+### load libraries for use in current working session
+library('dplyr')
+library('ggplot2')
+
+```
+
+## Import Data
+
+In this section, we import the necessary data for this lab.
+
+```{r import, include=FALSE}
+### set your working directory
+# use setwd to set your working directory
+
+# you can also go to session-> set working directory -> choose directory
+# working directory is the path to the folder and not file
+
+# make sure the path of the directory is correct, i.e., where you have stored your data
+
+setwd("C:/Users/Elish/OneDrive/Desktop/mgt_585/Week 8/Assignment")
+
+### import data file
+# read the files using read.csv
+usarrests <- read.csv(file = "usarrests.csv")
+
+```
+
+# US Arrests Case
+We use the *usarrests.csv* data set.
+
+This data contains crime statistics per 100,000 residents in 50 states of USA. For each of the 50 states in the United States, the data set contains the number of arrests per 100,000 residents for each of three crimes: *Assault*, *Murder*, and *Rape*. We also record *UrbanPop* (the percent of the population in each state living in urban areas). Note that the variables are measured in different units; Murder, Rape, and Assault are reported as the number of occurrences per 100,000 people, and UrbanPop is the percentage of the state’s population that lives in an urban area.
+
+The objective is to cluster different US states using crime statistics.
+
+First, familiarize yourself with the data.
+
+## Data exploration 
+Explore the dataset using 5 functions: dim(), str(), colnames(), head() and tail.
+
+```{r usarrestsexplore}
+
+# Explore the dataset using 5 functions: dim(), str(), colnames(), head() and tail
+
+dim(usarrests)
+
+str(usarrests)
+
+colnames(usarrests)
+
+head(usarrests)
+
+tail(usarrests)
+
+```
+
+Do the following tasks and answer the questions below.
+
+# Task 1: K-Means Clustering
+
+Use K-Means clustering to cluster the states.
+
+From our previous experience and according to the experts' view, we are expecting 3 kinds of US state clusters: low, medium and high crime rate. Perform K-means clustering with K = 3.
+
+```{r usarrestskmeans}
+
+set.seed(1234) # used when we want to reproduce results.
+
+# Because we are looking for three different US state clusters in the data
+# In the kmeans(), we will set number of clusters as 3 and the Xs are  "Murder", "Assault", "UrbanPop" and "Rape"
+km_usarrests <- kmeans(usarrests[, c("Murder", "Assault", "UrbanPop", "Rape")], 3, nstart = 20)
+km_usarrests
+
+
+```
+
+**Question 1**: How do you interpret the results? Interpret:
+(1) Cluster size, (2) Profile the Clusters and (3) Goodness of fit (Within cluster variation).
+
+**Please add your response here**
+
+(1) Let's start with cluster size.
+
+```{r usarrestsclustersize}
+
+# print out the assigned clusters to each state
+
+km_usarrests$cluster
+
+# summarize the frequency of each cluster
+
+table(km_usarrests$cluster)
+
+```
+
+**Interpret the outputs here**
+As shown in the table output, 14 states are assigned to one cluster, 20 to another Cluster and 16 to the other Cluster. 
+
+(2) Now we will talk about profiling clusters:
+
+```{r usarrestsProfiling}
+
+# Print the final centroids (center of the cluster)
+km_usarrests$centers
+
+# At this time, you can also start visualizing your clusters
+km_usarrests$cluster <- as.factor(km_usarrests$cluster) # covert the clusters to factor
+
+ggplot(usarrests, aes( Murder, Assault, UrbanPop, Rape, color = km_usarrests$cluster)) + 
+  geom_point() + 
+  # to add labels of US State name
+  geom_text(aes(label = State)) +
+  ggtitle("Clusters of US State based on number of usarrests ") + 
+  # to change label of the legend
+  labs(color = "Clusters")
+
+```
+
+**Interpret the outputs here**
+
+First, the centroid for one Cluster correspond to 8.214286 Murder,173.2857 Assault 70.64286 UrbanPop and 22.84286.
+
+Using our final centroids, we can start **profiling** our clusters. Profiling is making sense out of our clusters. While profiling, we generally write:
+(1) a distinct feature of a cluster and 
+(2) a relevant name for the cluster
+
+
+1-Cluster Medium Crisis: medium Murder, medium Assault, medium Rape
+2-Cluster Low Crisis: low Murder, low Assault, low Rape low UrbanPop
+3-Cluster High Crisis: high Murder, high Assault, high Rape 
+
+Last, we will talk about within cluster variation. Within cluster variation should be as small as possible.
+
+
+(3) Last, we will talk about within cluster variation. Within cluster variation should be as small as possible.
+
+```{r usarrestsclustervariation}
+
+# Print the final variation in the cluster
+# The individual within-cluster sum-of-squares are contained in the vector km.out$withinss.
+usarrests$withinss
+
+# Print the total cluster variation
+# km.out$tot.withinss is the total within-cluster sum of squares (equivalent to sum(km_covid$withinss)), which we seek to minimize by performing K-means clustering
+usarrests$tot.withinss
+
+# Print the between_SS / total_SS
+# between_SS is the between-cluster sum of squares (the sum of squared distances of centroids (averages of each cluster) to the overall sample average multiply by the number of observations)
+# Ideally you want a clustering that has the properties of internal cohesion and external separation, i.e. the BSS/TSS ratio should approach 1.
+km_usarrests$betweenss/km_usarrests$totss
+
+```
+
+**Interpret the outputs here**
+
+The BSS/TSS ratio is the measure of the total variance in the data set that is explained by the clustering. The ratio is 86.5%, indicating a good fit
+
+
+# Task 2: Hierarchical Clustering
+
+Using hierarchical clustering with complete linkage and Euclidean distance to cluster the states.
+
+Cut the dendrogram at a height that results in three distinct
+clusters. 
+
+```{r usarrestsHierarchical}
+
+# The dist() function is used to compute the inter-observation Euclidean distance matrix
+# compute distance matrix for X values
+
+# The dist() function is used to compute the inter-observation Euclidean distance matrix
+d <- dist(as.matrix(usarrests[,c("Murder", "Assault", "UrbanPop", "Rape")])) # compute distance matrix for X values
+hc <- hclust(d, method ="complete")
+
+#apply hierarchical clustering
+# We can now plot the dendrograms obtained using the usual plot() function.
+# The numbers at the bottom of the plot identify each observation.
+plot(hc, labels = usarrests$State, xlab = "States", ylab = "distance")  # plot the dendrogram
+
+# To determine the cluster labels for each observation associated with a given cut of the dendrogram, we can use the cutree() function
+ct = cutree (hc , 3)
+
+# Print which states go into each cluster
+# We use a for loop to print cluster number and the states that are clustered into that cluster
+for( k in 1:3 ){
+  print(k)
+  print(usarrests$State[ ct == k ] )
+}
+
+
+```
+
+**Question 2**: How do you interpret the dendrogram? Which states belong to which clusters with three distinct clusters? List the states for each cluster.
+
+**Please add your response here**
+
+The vertical axis on the dendrogram represents the dissimilarity (distance or height) between observations within the clusters, and the horizontal axis corresponds to the observation indexes. 
+
+Based on the cut of the dengrogram, given cut of 3 clusters, we can profile the clusters as follows:
+
+1-Cluster Medium Crisis: medium Murder, medium Assault, medium Rape (
+  "Alabama"              "Alaska"         "Arizona"        "California"    
+  "Delaware"       "Florida"        "Illinois"       "Louisiana"     
+ "Maryland"       "Michigan"       "Mississippi"    "Nevada"        
+ "New Mexico"     "New York"       "North Carolina" "South Carolina")
+ 
+2-Cluster Low Crisis: low Murder, low Assault, low Rape low UrbanPop(
+"Arkansas"      "Colorado"      "Georgia"       "Massachusetts"
+ "Missouri"      "New Jersey"    "Oklahoma"      "Oregon"       
+  "Rhode Island"  "Tennessee"     "Texas"         "Virginia"     
+ "Washington"    "Wyoming" )
+3-Cluster High Crisis: high Murder, high Assault, high Rape (
+"Connecticut"   "Hawaii"        "Idaho"         "Indiana"      
+ "Iowa"          "Kansas"        "Kentucky"      "Maine"        
+ "Minnesota"     "Montana"       "Nebraska"      "New Hampshire"
+ "North Dakota"  "Ohio"          "Pennsylvania"  "South Dakota" 
+"Utah"          "Vermont"       "West Virginia" "Wisconsin"    
+)
+
+
+
+# Task 3: Hierarchical Clustering (Extension)
+
+Note that in the US Arrests dataset  the variables are measured in different units and this might make the clustering flawed. A good way to handle this problem is to standardize the data so that all standardize variables are given a mean of zero and a standard deviation of one. Then all variables will be on a comparable scale. To scale the variables before performing hierarchical clustering of the observations, we use the scale() function.
+
+Hierarchically cluster the states using complete linkage and Euclidean distance, after scaling the variables to have standard deviation one.
+
+```{r scaleHierarchical}
+
+# Insides the dist() function use scale(usarrests[,2:5],center=FALSE) instead of as.matrix(usarrests[,2:5]) and then use hclust() to apply Hierarchical Clustering
+# The dist() function is used to compute the inter-observation Euclidean distance matrix
+d1 <- dist(scale(usarrests[,2:5],center=FALSE)) # compute distance matrix for X values
+hc1 <- hclust(d1, method ="complete")
+
+# plot the dendrogram
+plot(hc1, labels = usarrests$State, xlab = "States", ylab = "distance")
+
+# Cut the dendrogram at a height that results in three distinct clusters. 
+ct = cutree (hc1 , 3)
+
+# Print which states go into each cluster
+# We use a for loop to print cluster number and the states that are clustered into that cluster
+for( k in 1:3 ){
+  print(k)
+  print(usarrests$State[ ct == k ] )
+}
+
+```
+
+**Question 3**: Which states belong to which clusters with three distinct clusters? List the states for each cluster.
+
+**Please add your response here**
+1-Cluster Medium Crisis: medium Murder, medium Assault, medium Rape(
+Alabama"        "Georgia"        "Louisiana"      "Mississippi"   
+"North Carolina" "South Carolina"
+)
+2-Cluster Low Crisis: low Murder, low Assault, low Rape low UrbanPop(
+"Alaska"     "Arizona"    "California" "Colorado"   "Florida"   
+ "Illinois"   "Maryland"   "Michigan"   "Missouri"   "Nevada"    
+ "New Mexico" "New York"   "Tennessee"  "Texas"  
+)
+3-Cluster High Crisis: high Murder, high Assault, high Rape (
+"Arkansas"      "Connecticut"   "Delaware"      "Hawaii"       
+ "Idaho"         "Indiana"       "Iowa"          "Kansas"       
+ "Kentucky"      "Maine"         "Massachusetts" "Minnesota"    
+"Montana"       "Nebraska"      "New Hampshire" "New Jersey"   
+ "North Dakota"  "Ohio"          "Oklahoma"      "Oregon"       
+"Pennsylvania"  "Rhode Island"  "South Dakota"  "Utah"         
+ "Vermont"       "Virginia"      "Washington"    "West Virginia"
+ "Wisconsin"     "Wyoming"  
+)
+
+
+
+**Question 4**: What effect does scaling the variables have on the hierarchical clustering obtained? In your opinion, should the variables be scaled before the inter-observation dissimilarities are computed? Provide a justification for your answer.
+
+**Please add your response here**
+~scaling the variables lead to decrease in one cluster and increase in 3rd cluster.
+~Scaling the variables ensures that all variables have a similar range or distribution, allowing them to contribute equally to the clustering process. By scaling the variables, you prevent the dominance of variables with larger scales and obtain a more balanced and meaningful clustering solution.
+~By scaling the variables before computing dissimilarities, you can obtain more reliable and interpretable clustering results that are not biased by the scales of the variables.
